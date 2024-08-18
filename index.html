@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Vision Prediction</title>
+  <link rel="stylesheet" href="style.css">
+  
+</head>
+
+<body>
+
+  <h1>Custom Vision Prediction</h1>
+
+  <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)">
+  <button onclick="uploadImage()">Predict</button>
+
+  <!-- Contenedor para la vista previa de la imagen -->
+  <div id="imagePreviewContainer" style="margin-top: 20px;">
+    <img id="imagePreview" src="" alt="Vista previa de la imagen" style="max-width: 100%; height: auto; display: none; border: 2px solid #61dafb; border-radius: 10px;">
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    function previewImage(event) {
+      const fileInput = event.target;
+      const file = fileInput.files[0];
+      const preview = document.getElementById('imagePreview');
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+      } else {
+        preview.src = '';
+        preview.style.display = 'none';
+      }
+    }
+
+    function uploadImage() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert('Por favor, selecciona una imagen.');
+        return;
+      }
+
+      fetch('https://sr2024-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/45410b7b-6072-4e0b-81a5-d4a060b4e28f/classify/iterations/Iteration1/image', {
+        method: 'POST',
+        headers: {
+          'Prediction-Key': 'e8a31be65a4d40f4bbfaffe13c1c1d96',
+          'Content-Type': 'application/octet-stream'  // Aseguramos que se envía como un archivo binario
+        },
+        body: file
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          displayResults(data);
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          document.getElementById('results').textContent = 'Hubo un error al procesar la imagen.';
+        });
+    }
+
+    function displayResults(data) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      if (data && data.predictions) {
+        const predictions = data.predictions
+          .map(prediction => ({
+            tagName: prediction.tagName,
+            probability: (prediction.probability * 100).toFixed(2) // Convertir a porcentaje
+          }))
+          .sort((a, b) => b.probability - a.probability); // Ordenar por probabilidad
+
+        if (predictions.length > 0) {
+          const ul = document.createElement('ul');
+          predictions.forEach(prediction => {
+            const li = document.createElement('li');
+            li.classList.add('prediction');
+            li.textContent = `${prediction.tagName}: ${prediction.probability}%`;
+            ul.appendChild(li);
+          });
+          resultsDiv.appendChild(ul);
+        } else {
+          resultsDiv.textContent = 'No se encontraron resultados.';
+        }
+      } else {
+        resultsDiv.textContent = 'No se encontraron resultados.';
+      }
+    }
+  </script>
+
+  <script>
+    window.addEventListener('mouseover', initLandbot, { once: true });
+    window.addEventListener('touchstart', initLandbot, { once: true });
+    var myLandbot;
+    function initLandbot() {
+      if (!myLandbot) {
+        var s = document.createElement('script'); s.type = 'text/javascript'; s.async = true;
+        s.addEventListener('load', function () {
+          var myLandbot = new Landbot.Livechat({
+            configUrl: 'https://storage.googleapis.com/landbot.online/v3/H-2578691-KHWHIL3K857HCVDH/index.json',
+          });
+        });
+        s.src = 'https://cdn.landbot.io/landbot-3/landbot-3.0.0.js';
+        var x = document.getElementsByTagName('script')[0];
+        x.parentNode.insertBefore(s, x);
+      }
+    }
+  </script>
+</body>
+
+</html>
